@@ -129,7 +129,7 @@ setup.makeTracks()
 setup.findAllTrackCellIntersect(mesh.cells, spacing)
 f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
 print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
-"""
+
 setup.plotCellSegments(spacing, savepath)
 
 setup.getAngularQuadrature()
@@ -141,7 +141,7 @@ setup.getPolarWeight()
 setup.reflectRays()
 setup.getFSRVolumes(fuel, mod, mesh)
 #setup.getTrackLinkCoords()
-"""
+
 ##############################
 ########## PLOTTING ##########
 ##############################
@@ -154,7 +154,7 @@ setup.getFSRVolumes(fuel, mod, mesh)
 ########## SOLVE FOR FLUXES ##########
 ######################################
 
-"""
+
 flux = MethodOfCharacteristics(sigma_fuel_tot, sigma_mod_tot, fsr, setup, check, mesh)
 flux.solveFlux(num_iter_max, tol, update_source)
 f.write("\nConverged in %d iterations! \nAvg fuel flux\t %f \nAvg mod flux\t %f\nAverage Flux\t %f \nFlux ratio\t %f\n\n"
@@ -164,4 +164,3 @@ midpt = mesh.n_cells/2 - 1
 plotter.plotScalarFlux(mesh, 0, mesh.mesh, 0, savepath)
 plotter.plotCenterFlux(mesh, mesh.cells, midpt, 0, 0, savepath)
 plotter.plotCenterFluxY(mesh, mesh.cells, midpt, 0, 0, savepath)
-"""
