@@ -15,6 +15,8 @@ https://github.com/samuelshaner/DiscOrd/
 """
 
 def plotCenterFlux(mesh, solved, j, iter, order, savepath):
+    fignum = iter * order + j
+    plt.figure(fignum)
     ivals = []
     cellfluxes = []
     fuelbounds = [(mesh.n_mod-0.5), (mesh.n_fuel + mesh.n_mod - 0.5)]
@@ -29,10 +31,12 @@ def plotCenterFlux(mesh, solved, j, iter, order, savepath):
     plt.ylabel('Scalar Flux')
     plt.xlabel('X node # across centerline (Y node num ' + str(j) + ' )')
     plt.title('Horizontal centerline flux')
-    plt.savefig(savepath + '/horiz_flux_center.png')
+    plt.savefig(savepath + '/horiz_flux_center.png', dpi=1000)
     plt.close()
 
 def plotCenterFluxY(mesh, solved, i, iter, order, savepath):
+    fignum = iter * order + i + 1
+    plt.figure(fignum)
     jvals = []
     cellfluxes = []
     fuelbounds = [(mesh.n_mod - 0.5), (mesh.n_fuel + mesh.n_mod - 0.5)]
@@ -48,7 +52,7 @@ def plotCenterFluxY(mesh, solved, i, iter, order, savepath):
     plt.ylabel('Scalar Flux')
     plt.xlabel('Y node # across centerline (X node num ' + str(i) + ' )')
     plt.title('Vertical centerline flux')
-    plt.savefig(savepath + '/vert_flux_center.png')
+    plt.savefig(savepath + '/vert_flux_center.png', dpi=1000)
     plt.close()
 
 def plotMaterial(mesh, spacing, plot_cells, savepath):

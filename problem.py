@@ -13,14 +13,25 @@ import time
 ###################################
 ########## PROBLEM SETUP ##########
 ###################################
+singlesolve = False
+many_angles = True
+nazims = [8, 16]
+many_meshes = False
+spacings = [0.2, 0.1]
+many_track_spacings = False
+ts = [0.05]
+
+update_source = False
+tally_fuel_corner = True
+
 pitch = 1.6
 fwidth = 0.8                    #fuel width/height
 num_azim = 16                    #number of azimuthal angles desired
 t = 0.05                        #track spacing desired, cm
-spacing = 0.2                   #mesh spacing
+spacing = 0.1                   #mesh spacing
 n_p = 3                         #number of polar divisions; can be 2 or 3
-num_iter_max = 100              #maximum number of iterations on flux
-tol = 1e-7                      #tolerance for converge nce (using L2 Engineering Norm)
+num_iter_max = 200              #maximum number of iterations on flux
+tol = 1e-6                      #tolerance for converge nce (using L2 Engineering Norm)
 fuelgeom = 'square'
 
 h = pitch                       #height of pincell
@@ -32,8 +43,7 @@ r = fwidth/2                    #fuel pin effective radius (half width of square
 
 q_fuel = 10/(4*pi)                      #constant isotropic source in fuel
 q_mod = 0                       #no source in moderator
-update_source = False
-tally_fuel_corner = True
+
 
 
 #########################################
@@ -92,7 +102,7 @@ f.write("fuel total xs \t %g\nfuel scatter \t %g\nfuel absorp \t %g\n"
         "mod total xs \t %g\nmod scatter \t %g\nmod absorp \t%g\n"
         "*****************************\n\n" %(sigma_fuel_tot, sigma_fuel_scatter, sigma_fuel_abs, sigma_mod_tot, sigma_mod_scatter,sigma_mod_abs))
 
-
+f.close()
 ###############################################
 ########## SETUP FLAT SOURCE REGIONS ##########
 ###############################################
@@ -106,59 +116,136 @@ mod = geom.FlatSourceRegion(q_mod, sigma_mod_tot)
 fsr = [fuel, mod]
 
 
-# setup mesh cells
-mesh = geom.Geometry(pitch, spacing, fwidth, fuelmat, moderator)
-mesh.setMesh(tally_fuel_corner)
+def solveMOC(num_azim, spacing, t, savepath):
+        f = open('%s.txt' % resultsfile, 'a+')
+        print "\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing)
+        f.write("\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing))
+        # setup mesh cells
+        mesh = geom.Geometry(pitch, spacing, fwidth, fuelmat, moderator)
+        mesh.setMesh(tally_fuel_corner)
 
-cell_width = mesh.getWidth(pitch, spacing)
-fuel_width = mesh.getWidth(fwidth, spacing)
-plot_cells = mesh.getPlotCells(cell_width, fuel_width)
-plotter.plotMaterial(mesh, spacing, plot_cells, savepath)
+        cell_width = mesh.getWidth(pitch, spacing)
+        fuel_width = mesh.getWidth(fwidth, spacing)
+        plot_cells = mesh.getPlotCells(cell_width, fuel_width)
+        plotter.plotMaterial(mesh, spacing, plot_cells, savepath)
 
+        #####################################
+        ########## GENERATE TRACKS ##########
+        #####################################
+        check = ConvergenceTest()
+        setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
+        setup.getTrackParams()
+        setup.makeTracks()
+        setup.getAngularQuadrature()
+        setup.getPolarWeight()
+        setup.findIntersection()
+        setup.plotTracks(savepath)
+        setup.reflectRays()
 
-#####################################
-########## GENERATE TRACKS ##########
-#####################################
-check = ConvergenceTest()
-setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
-setup.getTrackParams()
-setup.makeTracks()
-setup.getAngularQuadrature()
-setup.getPolarWeight()
-setup.findIntersection()
-setup.plotTracks(savepath)
-setup.reflectRays()
+        setup.findAllTrackCellIntersect(mesh.cells, spacing)
+        f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
+        print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
 
-
-setup.findAllTrackCellIntersect(mesh.cells, spacing)
-f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
-print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
-#setup.plotCellSegments(spacing, savepath)
-
-setup.getFSRVolumes(fuel, mod, mesh)
-
-##############################
-########## PLOTTING ##########
-##############################
-
-#setup.plotTrackLinking(savepath)
-#setup.plotSegments()
-
-######################################
-########## SOLVE FOR FLUXES ##########
-######################################
+        setup.getFSRVolumes(fuel, mod, mesh)
 
 
-flux = MethodOfCharacteristics(sigma_fuel_tot, sigma_mod_tot, fsr, setup, check, mesh)
-flux.solveFlux(num_iter_max, tol, update_source)
-f.write("\nConverged in %d iterations! \nAvg fuel flux\t %f \nAvg mod flux\t %f\nAverage Flux\t %f \nFlux ratio\t %f"
-        "\nTop right fuel corner flux\t %g\nCorner flux over fuel source\t %g"
-        % (flux.results[0], flux.results[1], flux.results[2], flux.results[3], flux.results[4], flux.results[5], flux.results[5]/q_fuel))
+        ######################################
+        ########## SOLVE FOR FLUXES ##########
+        ######################################
+        flux = MethodOfCharacteristics(sigma_fuel_tot, sigma_mod_tot, fsr, setup, check, mesh)
+        MOCresults = flux.solveFlux(num_iter_max, tol, update_source)
+        midpt = mesh.n_cells/2 - 1
+        plotter.plotScalarFlux(mesh, 0, mesh.mesh, 0, savepath)
+        plotter.plotCenterFlux(mesh, mesh.cells, midpt, flux.results[0], 1, savepath)
+        plotter.plotCenterFluxY(mesh, mesh.cells, midpt, flux.results[0], 2, savepath)
+        if MOCresults:
+                f.write("\nConverged in %d iterations!\nL2 \t%g \nAvg fuel flux\t %f \nAvg mod flux\t %f\nAverage Flux\t %f "
+                        "\nFlux ratio\t %f\nTop right fuel corner flux\t %g\nCorner flux over fuel source\t %g\n\n"
+                        % (flux.results[0], flux.l2 ,flux.results[1], flux.results[2], flux.results[3], flux.results[4],
+                           flux.results[5], flux.results[5] / q_fuel))
+                f.close()
+        elif not MOCresults:
+                f.write("\n*********************************\n"
+                        "Not converged after %d iterations. Rerun this case with more iterations. \nL2 \t%g" % (num_iter_max, flux.l2))
+                f.write(
+                        "\nAvg fuel flux = %f nAvg mod flux = %f \nAverage Flux  = %f \nFlux ratio = %f"
+                        "\nTop right fuel corner flux\t %g\nCorner flux over fuel source\t %g\n"
+                        "\n ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** * \n"
+                        % (flux.results[1], flux.results[2], flux.results[3],
+                           flux.results[4], flux.results[5], flux.results[5] / q_fuel))
+                f.close()
+                #return 1
+        setup.plotCellSegments(spacing, savepath)
 
-midpt = mesh.n_cells/2 - 1
-plotter.plotScalarFlux(mesh, 0, mesh.mesh, 0, savepath)
-plotter.plotCenterFlux(mesh, mesh.cells, midpt, 0, 0, savepath)
-plotter.plotCenterFluxY(mesh, mesh.cells, midpt, 0, 0, savepath)
+def solveManyMesh(spacings, nazim, t):
+        f = open('%s.txt' % resultsfile, 'a+')
+        print "Iterating over mesh spacings....\n\n"
+        f.write("Iterating over mesh spacings...\n\n")
+        f.close()
+        for spacing in spacings:
+                savepath = pathname + '/mesh_' + str(spacing) + 'nazim_' + str(nazim) + 'track_' + str(t)
+                plotter.mkdir_p(savepath)
+
+                solveMOC(nazim, spacing, t, savepath)
+
+
+def solveManyAzim(spacing, nazims, t):
+        f = open('%s.txt' % resultsfile, 'a+')
+        print "Iterating over azimuthal angles....\n\n"
+        f.write("Iterating over azimuthal angles...\n\n")
+        f.close()
+        for nazim in nazims:
+                savepath = pathname +  '/nazim_' + str(nazim) + 'track_' + str(t) + 'mesh_' + str(spacing)
+                plotter.mkdir_p(savepath)
+
+                solveMOC(nazim, spacing, t, savepath)
+
+def solveManyTrackSpacings(spacing, nazim, ts):
+        f = open('%s.txt' % resultsfile, 'a+')
+        print "Iterating over track spacings....\n\n"
+        f.write("Iterating over track spacings...\n\n")
+        f.close()
+        for t in ts:
+                savepath = pathname + '/track_' + str(t) + 'mesh_' + str(spacing) +'nazim_' + str(nazim)
+                plotter.mkdir_p(savepath)
+
+                solveMOC(nazim, spacing, t, savepath)
+
+def makePlotSegments(savepath):
+        mesh = geom.Geometry(pitch, spacing, fwidth, fuelmat, moderator)
+        mesh.setMesh(tally_fuel_corner)
+        setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
+        setup.getTrackParams()
+        setup.makeTracks()
+        setup.findIntersection()
+        setup.plotTracks(savepath)
+        setup.findAllTrackCellIntersect(mesh.cells, spacing)
+        setup.plotCellSegments(spacing, savepath)
+
+
+if singlesolve:
+        solveMOC(num_azim, spacing, t, savepath)
+
+if many_angles and many_meshes and many_track_spacings:
+        for spacing in spacings:
+                for t in ts:
+                        solveManyAzim(spacing, nazims, t)
+elif many_angles and many_meshes:
+        for spacing in spacings:
+                solveManyAzim(spacing, nazims, t)
+elif many_meshes and many_track_spacings:
+        for t in ts:
+                solveManyMesh(spacings, num_azim, t)
+elif many_angles and many_track_spacings:
+        for t in ts:
+                solveManyAzim(spacing, nazims, t)
+elif many_angles:
+        solveManyAzim(spacing, nazims, t)
+elif many_meshes:
+        solveManyMesh(spacings, num_azim, t)
+elif many_track_spacings:
+        solveManyTrackSpacings(spacing, num_azim, ts)
+
 f.close()
-
 plotter.saveInputFile(savepath)
+

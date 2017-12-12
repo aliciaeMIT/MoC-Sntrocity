@@ -507,14 +507,14 @@ class InitializeTracks(object):
                             x_out <= 0.0 or y_out <= 0.0):
                         # track end coordinates reached
                         on_same_track = False
-                        print "end of track reached!\n %d segments total\n\n" % (seg)
+                        #print "end of track reached!\n %d segments total\n\n" % (seg)
                         seg = 0
                     elif next_i >= imax or next_j >= imax or next_i < 0 or next_j < 0:
                         on_same_track = False
-                        print "end of track reached (i or jmax reached)\n %d segments total\n\n" % (seg)
+                        #print "end of track reached (i or jmax reached)\n %d segments total\n\n" % (seg)
                         seg = 0
                     else:
-                        print "next cell: %g, %g\n" % (next_i, next_j)
+                        #print "next cell: %g, %g\n" % (next_i, next_j)
                         seg += 1
 
     def findSingleTrackCellIntersect(self, track, dmesh, cells, xi, yi, next_i, next_j):
@@ -583,13 +583,14 @@ class InitializeTracks(object):
 
         s = self.segmentStore(xi, intcept_coords[0], yi, intcept_coords[1], i, j, cell.region, cell)
         self.tot_num_segments += 1
-        print "segment created for i %d j %d, region %s" % (i, j, cell.region)
+        #print "segment created for i %d j %d, region %s" % (i, j, cell.region)
         cell.segments.append(s)
         track.segments.append(s)
 
         return next_cell[0], next_cell[1], intcept_coords[0], intcept_coords[1]
 
     def plotCellSegments(self, dmesh, savepath):
+        print "plotting segments..."
         fig1 = plt.figure()
         ax1 = fig1.add_subplot(111, aspect='equal')
         plt.axis([0, self.width, 0, self.height])
@@ -626,8 +627,8 @@ class InitializeTracks(object):
                     else:
                         print "Error: segment region not set"
 
-        print "plotting segments..."
-        plt.savefig(savepath + '/cell_region_sectioning.png')
+        #print "plotting segments..."
+        plt.savefig(savepath + '/cell_region_sectioning.png', dpi=1000)
         plt.close()
 
     def reflectRays(self):
@@ -736,13 +737,13 @@ class InitializeTracks(object):
         tot_area = 0
         for i in range(mesh.n_cells):
             for cell in mesh.cells[i]:
-                print "cell area calculated = %f \ncell area expected = %f \n" % (cell.area, cellarea)
+                #print "cell area calculated = %f \ncell area expected = %f \n" % (cell.area, cellarea)
                 if not round(cell.area, 6) == 0.0:
                     cell.corr = cellarea / cell.area
                 cell.area = cellarea
                 tot_area += cell.area
 
-                print "cell track area correction factor: %f" % (cell.corr)
+                #print "cell track area correction factor: %f" % (cell.corr)
 
         if self.geom == 'circle':
             est_area_fuel = math.pi * self.radius ** 2

@@ -18,6 +18,7 @@ class MethodOfCharacteristics(object):
         self.mesh = mesh
         self.cells = mesh.cells
         self.results = []
+        self.l2 = 1
         #get n_p by self.setup.n_p, numazim2 by self.setup.num_azim2
         #get segments in a track by self.tracks.segments
         #get segments in a region by self.regions.segments
@@ -51,11 +52,11 @@ class MethodOfCharacteristics(object):
         self.preCalculate()
         num_iter = 0
         delta_flux = 0
-        #fuel = self.regions[0]
-        #mod = self.regions[1]
+
         converged = False
-        flux_old = []
+
         scalar_flux_old = [0, 0]
+        converged_actual = False
 
         print "Solving for fluxes...\n"
 
@@ -63,14 +64,18 @@ class MethodOfCharacteristics(object):
         if update_source:
             for i in range(self.mesh.n_cells):
                 for cell in self.cells[i]:
-                    #cell = self.cells[i][j]
+
                     if cell.material.name == 'fuel':
-                        absorpt = 1
+                        if not cell.material.absorption  > 0:
+                            absorpt = 1
+                        else:
+                            absorpt = cell.material.absorption
                     else:
                         absorpt = cell.material.xs - cell.material.scatter
                     cell.flux = cell.material.q / absorpt
 
         while not converged:
+            self.results = []
             if update_source:
                 self.updateAllCellSource()
             for p in range(stp.n_p):                                       #loop over polar angles
@@ -120,10 +125,15 @@ class MethodOfCharacteristics(object):
 
             getfluxes = list(self.getAvgScalarFlux())
             cornerflux = self.getCornerFlux()
+            self.results.append(num_iter)
+            for item in getfluxes:
+                self.results.append(item)
+            self.results.append(cornerflux)
 
             scalar_flux = getfluxes[:2]
             print "Checking convergence for iteration %d\n" % (num_iter)
             converged = self.check.isConverged(scalar_flux, scalar_flux_old, tol)
+            self.l2 = self.check.l2
             #converged = True
             if not converged:
                 num_iter += 1
@@ -136,14 +146,21 @@ class MethodOfCharacteristics(object):
 
                 if num_iter == num_iter_tot:
                     converged = True
+                    converged_actual = False
                     print "Not converged after %d iterations.\n" %(num_iter)
+
             else:
                 print "Converged in %d iterations\n" %(num_iter)
+                converged_actual = True
+        if converged_actual:
+            return True
+        else:
+            return False
                 #self.results.append(self.returnSolveResults(num_iter, getfluxes[0], getfluxes[1], getfluxes[2], getfluxes[3]))
-                self.results.append(num_iter)
-                for item in getfluxes:
-                    self.results.append(item)
-                self.results.append(cornerflux)
+                #self.results.append(num_iter)
+                #for item in getfluxes:
+                #    self.results.append(item)
+                #self.results.append(cornerflux)
 
         #normalize fuel flux to 1
         #fuel.flux /= mod.flux
@@ -256,6 +273,7 @@ class MethodOfCharacteristics(object):
 
 class ConvergenceTest(object):
     def __init__(self):
+        self.l2 = 0
         """
         class for testing convergence using the L2 engineering norm
         n is the iteration index, i is the vector content index, I is total number of entries in vector.
@@ -271,10 +289,15 @@ class ConvergenceTest(object):
 
         if l2 < epsilon:
             print "Converged! l2 %g" %(l2)
+            self.returnL2(l2)
             return True
         else:
             print "Not converged; l2 %g" %(l2)
+            self.returnL2(l2)
             return False
+
+    def returnL2(self, l2):
+        self.l2 = l2
 
     def sourceProptoXSTest(self, xsfuel, xsmod):
         """test that sets source in each region proportional to the cross section in that region
