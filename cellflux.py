@@ -17,6 +17,7 @@ class MethodOfCharacteristics(object):
         self.exponential = []
         self.mesh = mesh
         self.cells = mesh.cells
+        self.results = []
         #get n_p by self.setup.n_p, numazim2 by self.setup.num_azim2
         #get segments in a track by self.tracks.segments
         #get segments in a region by self.regions.segments
@@ -117,7 +118,9 @@ class MethodOfCharacteristics(object):
                                 + cell.flux / (cell.material.xs * cell.area)
                     #may need to have 4pi on the last term as well, check later
 
-            getfluxes = self.getAvgScalarFlux()
+            getfluxes = list(self.getAvgScalarFlux())
+            cornerflux = self.getCornerFlux()
+
             scalar_flux = getfluxes[:2]
             print "Checking convergence for iteration %d\n" % (num_iter)
             converged = self.check.isConverged(scalar_flux, scalar_flux_old, tol)
@@ -136,8 +139,11 @@ class MethodOfCharacteristics(object):
                     print "Not converged after %d iterations.\n" %(num_iter)
             else:
                 print "Converged in %d iterations\n" %(num_iter)
-                self.results = self.returnSolveResults(num_iter, getfluxes[0], getfluxes[1], getfluxes[2], getfluxes[3])
-
+                #self.results.append(self.returnSolveResults(num_iter, getfluxes[0], getfluxes[1], getfluxes[2], getfluxes[3]))
+                self.results.append(num_iter)
+                for item in getfluxes:
+                    self.results.append(item)
+                self.results.append(cornerflux)
 
         #normalize fuel flux to 1
         #fuel.flux /= mod.flux
@@ -191,13 +197,10 @@ class MethodOfCharacteristics(object):
         #avg_fuel = fuelflux / fuelcell
         #avg_mod = modflux / modcell
 
-
         for i in range(self.mesh.n_cells):
             for cell in self.cells[i]:
                 cell.flux /= maxflux
-
                 if cell.region == 'fuel':
-
                     #cell.flux /= avg_fuel
 
                     # accumulate scalar flux avg for fuel
@@ -205,13 +208,11 @@ class MethodOfCharacteristics(object):
                     fuelcell += 1
 
                 elif cell.region == 'moderator':
-
                     #cell.flux /= avg_mod
 
                     # accumulate scalar flux avg for mod
                     modflux += cell.flux
                     modcell += 1
-
                 else:
                     print "error in flux accumulation"
 
@@ -225,6 +226,19 @@ class MethodOfCharacteristics(object):
         avg /= maxflux
         print "Avg fuel flux = %f \nAvg mod flux = %f \nAverage Flux  = %f \nFlux ratio = %f" % (fuelflux, modflux, avg, ratio)
         return fuelflux, modflux, avg, ratio
+
+    def getCornerFlux(self):
+        #accumulates and averages the fluxes over the cells in the top right quarter corner of fuel
+        #corner_cells = list of mesh cell objects in top right quarter of fuel
+        cornerflux = 0
+        corner_cells = self.mesh.top_right_corner_fuel
+        num_corner_cells = len(corner_cells)
+        for cell in corner_cells:
+            cornerflux += cell.flux
+        cornerflux /= num_corner_cells
+        print "\ncorner flux = %g, num_cells in corner = %g\n" %(cornerflux, num_corner_cells)
+        return cornerflux
+
 
     def updateSource(self, q, flux, scatter):
         #calc = ((1/2) * (scatter * flux + q))
