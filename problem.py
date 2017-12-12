@@ -14,36 +14,42 @@ import time
 ########## PROBLEM SETUP ##########
 ###################################
 singlesolve = False
+
 many_angles = True
-nazims = [8, 16]
-many_meshes = False
-spacings = [0.2, 0.1]
-many_track_spacings = False
+many_meshes = True
+many_track_spacings = True
+
+makeplotonly = True
+
+nazims = [32, 64]
+spacings = [0.2, 0.1, 0.05]
 ts = [0.05]
 
-update_source = False
-tally_fuel_corner = True
+num_azim = 8                    #number of azimuthal angles desired
+t = 0.05                        #track spacing desired, cm
+spacing = 0.4                   #mesh spacing
+
+
 
 pitch = 1.6
 fwidth = 0.8                    #fuel width/height
-num_azim = 16                    #number of azimuthal angles desired
-t = 0.05                        #track spacing desired, cm
-spacing = 0.1                   #mesh spacing
 n_p = 3                         #number of polar divisions; can be 2 or 3
 num_iter_max = 200              #maximum number of iterations on flux
 tol = 1e-6                      #tolerance for converge nce (using L2 Engineering Norm)
 fuelgeom = 'square'
 
-h = pitch                       #height of pincell
-w = pitch                       #width of pincell
+#h = pitch                       #height of pincell
+#w = pitch                       #width of pincell
 r = fwidth/2                    #fuel pin effective radius (half width of square fuel pin)
+
+update_source = False
+tally_fuel_corner = True
 #########################################
 ########## MATERIAL PROPERTIES ##########
 #########################################
 
 q_fuel = 10/(4*pi)                      #constant isotropic source in fuel
 q_mod = 0                       #no source in moderator
-
 
 
 #########################################
@@ -133,7 +139,7 @@ def solveMOC(num_azim, spacing, t, savepath):
         ########## GENERATE TRACKS ##########
         #####################################
         check = ConvergenceTest()
-        setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
+        setup = InitializeTracks(num_azim, t, pitch, pitch, n_p, r, fsr, fuelgeom)
         setup.getTrackParams()
         setup.makeTracks()
         setup.getAngularQuadrature()
@@ -185,7 +191,6 @@ def solveManyMesh(spacings, nazim, t):
         for spacing in spacings:
                 savepath = pathname + '/mesh_' + str(spacing) + 'nazim_' + str(nazim) + 'track_' + str(t)
                 plotter.mkdir_p(savepath)
-
                 solveMOC(nazim, spacing, t, savepath)
 
 
@@ -197,7 +202,6 @@ def solveManyAzim(spacing, nazims, t):
         for nazim in nazims:
                 savepath = pathname +  '/nazim_' + str(nazim) + 'track_' + str(t) + 'mesh_' + str(spacing)
                 plotter.mkdir_p(savepath)
-
                 solveMOC(nazim, spacing, t, savepath)
 
 def solveManyTrackSpacings(spacing, nazim, ts):
@@ -211,26 +215,39 @@ def solveManyTrackSpacings(spacing, nazim, ts):
 
                 solveMOC(nazim, spacing, t, savepath)
 
-def makePlotSegments(savepath):
+def makePlotSegments(num_azim, spacing, t, savepath):
+        f = open('%s.txt' % resultsfile, 'a+')
+        print "\nPlotting segments, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing)
+
         mesh = geom.Geometry(pitch, spacing, fwidth, fuelmat, moderator)
         mesh.setMesh(tally_fuel_corner)
-        setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
+        setup = InitializeTracks(num_azim, t, pitch, pitch, n_p, r, fsr, fuelgeom)
         setup.getTrackParams()
         setup.makeTracks()
         setup.findIntersection()
-        setup.plotTracks(savepath)
+        #setup.plotTracks(savepath)
         setup.findAllTrackCellIntersect(mesh.cells, spacing)
-        setup.plotCellSegments(spacing, savepath)
+        #setup.plotCellSegments(spacing, savepath)
+        f.write("n_azim \t%d \ttrack spacing %g\tmesh spacing\t%g\tsegments\t%g\n" % (num_azim, t, spacing, setup.tot_num_segments))
+        #f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
+        print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
+        f.close()
+
 
 
 if singlesolve:
         solveMOC(num_azim, spacing, t, savepath)
 
-if many_angles and many_meshes and many_track_spacings:
+if makeplotonly and many_angles and many_meshes and many_track_spacings:
+        for angle in nazims:
+                for t in ts:
+                        for space in spacings:
+                                makePlotSegments(angle, space, t, savepath)
+elif many_angles and many_meshes and many_track_spacings:
         for spacing in spacings:
                 for t in ts:
                         solveManyAzim(spacing, nazims, t)
-elif many_angles and many_meshes:
+elif many_angles and many_meshes and not makeplotonly:
         for spacing in spacings:
                 solveManyAzim(spacing, nazims, t)
 elif many_meshes and many_track_spacings:
@@ -245,6 +262,8 @@ elif many_meshes:
         solveManyMesh(spacings, num_azim, t)
 elif many_track_spacings:
         solveManyTrackSpacings(spacing, num_azim, ts)
+elif makeplotonly:
+        makePlotSegments(num_azim, spacing, t, savepath)
 
 f.close()
 plotter.saveInputFile(savepath)

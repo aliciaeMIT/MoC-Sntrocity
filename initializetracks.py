@@ -87,12 +87,14 @@ class InitializeTracks(object):
         fig1 = plt.figure()
         ax1 = fig1.add_subplot(111, aspect='equal')
         plt.axis([0, self.width, 0, self.height])
+        """
         if self.geom == 'square':
             xy = ((self.width / 2 - self.radius), (self.height / 2 - self.radius))
             c = patches.Rectangle(xy, self.radius * 2, self.radius * 2, color='b', fill=True)
         else:
             c = patches.Circle((self.width / 2, self.height / 2), self.radius, color='b', fill=True)
         ax1.add_patch(c)
+        """
 
         for i in range(self.num_azim2):
             # for i in [0, self.num_azim2-1]: #for debugging, to plot complementary angles (tracks should be cyclic)
@@ -120,7 +122,7 @@ class InitializeTracks(object):
                     print "j out of counter", j, counter
                     raise
 
-                plt.plot(xvals, yvals, 'k')
+                plt.plot(xvals, yvals, 'k', linewidth=0.5)
                 """
                 if not (self.intersect1[i][j] == None):
                     xi1, yi1 = self.intersect1[i][j]
@@ -129,7 +131,7 @@ class InitializeTracks(object):
                     plt.plot(xi2, yi2, 'go')
                 """
         print "plotting tracks..."
-        plt.savefig(savepath + '/tracks.png')
+        plt.savefig(savepath + '/tracks.png', dpi=1000)
         plt.close()
 
     def getTrackParams(self):
@@ -622,8 +624,10 @@ class InitializeTracks(object):
                     if s.region == 'moderator':
                         # plt.plot(xvals, yvals)
                         plt.plot(xvals, yvals, 'm', linewidth=0.5)
+
                     elif s.region == 'fuel':
                         plt.plot(xvals, yvals, 'c--', linewidth=0.5)
+                        print "added fuel...\n"
                     else:
                         print "Error: segment region not set"
 
