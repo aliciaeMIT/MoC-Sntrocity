@@ -15,12 +15,12 @@ import time
 ###################################
 pitch = 1.6
 fwidth = 0.8                    #fuel width/height
-num_azim = 24                    #number of azimuthal angles desired
-t = 0.05                         #track spacing desired, cm
-spacing = 0.01                   #mesh spacing
+num_azim = 64                    #number of azimuthal angles desired
+t = 0.05                        #track spacing desired, cm
+spacing = 0.08                   #mesh spacing
 n_p = 3                         #number of polar divisions; can be 2 or 3
 num_iter_max = 100              #maximum number of iterations on flux
-tol = 1e-3                      #tolerance for convergence (using L2 Engineering Norm)
+tol = 1e-7                      #tolerance for convergence (using L2 Engineering Norm)
 fuelgeom = 'square'
 
 h = pitch                       #height of pincell
@@ -30,7 +30,7 @@ r = fwidth/2                    #fuel pin effective radius (half width of square
 ########## MATERIAL PROPERTIES ##########
 #########################################
 
-q_fuel = 10/(4 * pi)             #constant isotropic source in fuel
+q_fuel = 1                      #constant isotropic source in fuel
 q_mod = 0                       #no source in moderator
 update_source = False
 """
@@ -126,19 +126,24 @@ check = ConvergenceTest()
 setup = InitializeTracks(num_azim, t, w, h, n_p, r, fsr, fuelgeom)
 setup.getTrackParams()
 setup.makeTracks()
-setup.findAllTrackCellIntersect(mesh.cells, spacing)
-f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
-print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
 
-setup.plotCellSegments(spacing, savepath)
 
 setup.getAngularQuadrature()
 setup.getPolarWeight()
-#if fuelgeom == 'square':
-#    setup.findIntersection()
+
+if fuelgeom == 'square':
+    setup.findIntersection()
+
+setup.plotTracks(savepath)
 #else:
 #    setup.findCircleIntersection()
 setup.reflectRays()
+
+setup.findAllTrackCellIntersect(mesh.cells, spacing)
+f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
+print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
+#setup.plotCellSegments(spacing, savepath)
+
 setup.getFSRVolumes(fuel, mod, mesh)
 #setup.getTrackLinkCoords()
 
@@ -146,7 +151,7 @@ setup.getFSRVolumes(fuel, mod, mesh)
 ########## PLOTTING ##########
 ##############################
 
-#setup.plotTracks(savepath)
+
 #setup.plotTrackLinking(savepath)
 #setup.plotSegments()
 
@@ -164,3 +169,6 @@ midpt = mesh.n_cells/2 - 1
 plotter.plotScalarFlux(mesh, 0, mesh.mesh, 0, savepath)
 plotter.plotCenterFlux(mesh, mesh.cells, midpt, 0, 0, savepath)
 plotter.plotCenterFluxY(mesh, mesh.cells, midpt, 0, 0, savepath)
+f.close()
+
+plotter.saveInputFile(savepath)

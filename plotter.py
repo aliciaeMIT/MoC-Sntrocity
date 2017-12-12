@@ -5,6 +5,7 @@ from math import *
 import matplotlib.pyplot as plt
 from errno import EEXIST
 from os import makedirs,path
+import shutil
 """
 Plotting tool for SN/MOC to plot mesh, scalar flux
 
@@ -146,3 +147,15 @@ def mkdir_p(mypath):
         if exc.errno == EEXIST and path.isdir(mypath):
             pass
         else: raise
+
+def saveInputFile(savepath):
+    """saves copy of input file in same directory as plots"""
+    filename = savepath + '/input.py'
+    try:
+        shutil.copy('problem.py', filename)
+    # eg. src and dest are the same file
+    except shutil.Error as e:
+        print('Error: %s' % e)
+    # eg. source or destination doesn't exist
+    except IOError as e:
+        print('Error: %s' % e.strerror)

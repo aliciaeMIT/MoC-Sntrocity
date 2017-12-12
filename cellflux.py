@@ -59,14 +59,15 @@ class MethodOfCharacteristics(object):
         print "Solving for fluxes...\n"
 
         # initialize scalar flux guesses for source calculation: phi = q / sigma_absorption for mod, phi = q for fuel
-        for i in range(self.mesh.n_cells):
-            for cell in self.cells[i]:
-                #cell = self.cells[i][j]
-                if cell.region == 'fuel':
-                    absorpt = 1
-                else:
-                    absorpt = cell.material.xs - cell.material.scatter
-                cell.flux = cell.material.q / absorpt
+        if update_source:
+            for i in range(self.mesh.n_cells):
+                for cell in self.cells[i]:
+                    #cell = self.cells[i][j]
+                    if cell.material.name == 'fuel':
+                        absorpt = 1
+                    else:
+                        absorpt = cell.material.xs - cell.material.scatter
+                    cell.flux = cell.material.q / absorpt
 
         while not converged:
             if update_source:
@@ -172,7 +173,7 @@ class MethodOfCharacteristics(object):
         avg = scalarflux / (self.mesh.n_cells ** 2)
         for i in range(self.mesh.n_cells):
             for cell in self.cells[i]:
-                #cell.flux /= avg
+
                 if cell.flux > maxflux:
                     maxflux = cell.flux
                 """
@@ -184,19 +185,33 @@ class MethodOfCharacteristics(object):
                     # accumulate scalar flux avg for mod
                     modflux += cell.flux
                     modcell += 1
+
+                cell.flux /= avg
                 """
+        #avg_fuel = fuelflux / fuelcell
+        #avg_mod = modflux / modcell
+
+
         for i in range(self.mesh.n_cells):
             for cell in self.cells[i]:
                 cell.flux /= maxflux
 
                 if cell.region == 'fuel':
+
+                    #cell.flux /= avg_fuel
+
                     # accumulate scalar flux avg for fuel
                     fuelflux += cell.flux
                     fuelcell += 1
+
                 elif cell.region == 'moderator':
+
+                    #cell.flux /= avg_mod
+
                     # accumulate scalar flux avg for mod
                     modflux += cell.flux
                     modcell += 1
+
                 else:
                     print "error in flux accumulation"
 

@@ -121,13 +121,13 @@ class InitializeTracks(object):
                     raise
 
                 plt.plot(xvals, yvals, 'k')
-
+                """
                 if not (self.intersect1[i][j] == None):
                     xi1, yi1 = self.intersect1[i][j]
                     xi2, yi2 = self.intersect2[i][j]
                     plt.plot(xi1, yi1, 'ro')
                     plt.plot(xi2, yi2, 'go')
-
+                """
         print "plotting tracks..."
         plt.savefig(savepath + '/tracks.png')
         plt.close()
@@ -244,8 +244,6 @@ class InitializeTracks(object):
 
                 x0, y0 = self.startpoint[i][j]
                 x1, y1 = self.endpoint[i][j]
-                track = self.tracks[i][j]  # reference to object that stores this track
-                raylen = self.lengthTwoPoints(x0, x1, y0, y1)
 
                 m = (y1 - y0) / (x1 - x0)
 
@@ -334,17 +332,6 @@ class InitializeTracks(object):
                     self.intersect1[i].append((fx, fy))
                     self.intersect2[i].append((gx, gy))
 
-                    # store first segment: from startpoint to intersect1
-                    # s = self.segmentStore(x0, fx, y0, fy, i, j, 0)
-                    # track.segments.append(s)
-
-                    # store second segment: from intersect1 to intersect2
-                    # s = self.segmentStore(fx, gx, fy, gy, i, j, 1)
-                    # track.segments.append(s)
-
-                    # store third segment: from intersect2 to endpoint
-                    # s = self.segmentStore(gx, x1, gy, y1, i, j, 0)
-                    # track.segments.append(s)
 
                 elif n_ints == 1:
                     print "line is tangent\n"
@@ -633,9 +620,9 @@ class InitializeTracks(object):
 
                     if s.region == 'moderator':
                         # plt.plot(xvals, yvals)
-                        plt.plot(xvals, yvals, 'm')
+                        plt.plot(xvals, yvals, 'm', linewidth=0.5)
                     elif s.region == 'fuel':
-                        plt.plot(xvals, yvals, 'c--')
+                        plt.plot(xvals, yvals, 'c--', linewidth=0.5)
                     else:
                         print "Error: segment region not set"
 
@@ -752,7 +739,7 @@ class InitializeTracks(object):
                 print "cell area calculated = %f \ncell area expected = %f \n" % (cell.area, cellarea)
                 if not round(cell.area, 6) == 0.0:
                     cell.corr = cellarea / cell.area
-                    cell.area = cellarea
+                cell.area = cellarea
                 tot_area += cell.area
 
                 print "cell track area correction factor: %f" % (cell.corr)
