@@ -15,20 +15,19 @@ import time
 ###################################
 singlesolve = False
 
-many_angles = True
+many_angles = False
 many_meshes = True
-many_track_spacings = True
+many_track_spacings = False
 
-makeplotonly = True
+makeplotonly = False
 
-nazims = [32, 64]
-spacings = [0.2, 0.1, 0.05]
+nazims = [64]
+spacings = [0.1, 0.05]
 ts = [0.05]
 
-num_azim = 8                    #number of azimuthal angles desired
+num_azim = 64                    #number of azimuthal angles desired
 t = 0.05                        #track spacing desired, cm
-spacing = 0.4                   #mesh spacing
-
+spacing = 0.2                   #mesh spacing
 
 
 pitch = 1.6
@@ -123,6 +122,7 @@ fsr = [fuel, mod]
 
 
 def solveMOC(num_azim, spacing, t, savepath):
+        #resultfilename = '/' + resultsfile + ''
         f = open('%s.txt' % resultsfile, 'a+')
         print "\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing)
         f.write("\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing))
@@ -181,7 +181,7 @@ def solveMOC(num_azim, spacing, t, savepath):
                            flux.results[4], flux.results[5], flux.results[5] / q_fuel))
                 f.close()
                 #return 1
-        setup.plotCellSegments(spacing, savepath)
+        #setup.plotCellSegments(spacing, savepath)
 
 def solveManyMesh(spacings, nazim, t):
         f = open('%s.txt' % resultsfile, 'a+')
