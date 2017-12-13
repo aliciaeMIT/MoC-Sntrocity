@@ -16,7 +16,7 @@ def readMOCdata():
     ln_unknowns = MOCdata[:,7]
     return unknowns, corner_ratio
 
-def readSNdata(x_vals, y_vals):
+def readSNdata():
     SNdata = genfromtxt('sndata.txt', delimiter='\t')
     unknowns = SNdata[:,0]
     fm_ratio = SNdata[:,1]
@@ -26,14 +26,19 @@ def readSNdata(x_vals, y_vals):
     ln_corner = SNdata[:,5]
     ln_ratio = SNdata[:,6]
     ln_unknowns = SNdata[:,7]
-    return x_vals, y_vals
+    return unknowns, corner_ratio
 
 newx=[]
+newx2=[]
 xvals, yvals = readMOCdata()
+x2vals, y2vals = readSNdata()
 for val in xvals:
     newx.append(1/val)
+for val in x2vals:
+    newx2.append(1/val)
 plt.figure()
 plt.loglog(newx, yvals, 'o')
+plt.loglog(newx2, y2vals, '*')
 #plt.ylabel('Scalar Flux')
 #plt.xlabel('X node # across centerline)
 #plt.title('Horizontal centerline flux')
