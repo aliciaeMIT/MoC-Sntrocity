@@ -21,13 +21,13 @@ many_track_spacings = False
 
 makeplotonly = False
 
-nazims = [64]
-spacings = [0.1, 0.05]
-ts = [0.05]
+nazims = [8, 12, 20, 24, 32, 64]
+spacings = [0.2, 0.1, 0.08, 0.05, 0.04, 0.02]
+ts = [0.1, 0.05, 0.03]
 
-num_azim = 64                    #number of azimuthal angles desired
-t = 0.05                        #track spacing desired, cm
-spacing = 0.2                   #mesh spacing
+num_azim = 8                    #number of azimuthal angles desired
+t = 0.01                        #track spacing desired, cm
+spacing = 0.02                   #mesh spacing
 
 
 pitch = 1.6
@@ -37,8 +37,6 @@ num_iter_max = 200              #maximum number of iterations on flux
 tol = 1e-6                      #tolerance for converge nce (using L2 Engineering Norm)
 fuelgeom = 'square'
 
-#h = pitch                       #height of pincell
-#w = pitch                       #width of pincell
 r = fwidth/2                    #fuel pin effective radius (half width of square fuel pin)
 
 update_source = False
@@ -108,6 +106,7 @@ f.write("fuel total xs \t %g\nfuel scatter \t %g\nfuel absorp \t %g\n"
         "*****************************\n\n" %(sigma_fuel_tot, sigma_fuel_scatter, sigma_fuel_abs, sigma_mod_tot, sigma_mod_scatter,sigma_mod_abs))
 
 f.close()
+
 ###############################################
 ########## SETUP FLAT SOURCE REGIONS ##########
 ###############################################
@@ -126,6 +125,9 @@ def solveMOC(num_azim, spacing, t, savepath):
         f = open('%s.txt' % resultsfile, 'a+')
         print "\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing)
         f.write("\nSolving MOC, n_azim %d, track spacing %g, mesh spacing %g" % (num_azim, t, spacing))
+
+        check = ConvergenceTest()
+
         # setup mesh cells
         mesh = geom.Geometry(pitch, spacing, fwidth, fuelmat, moderator)
         mesh.setMesh(tally_fuel_corner)
@@ -135,10 +137,11 @@ def solveMOC(num_azim, spacing, t, savepath):
         plot_cells = mesh.getPlotCells(cell_width, fuel_width)
         plotter.plotMaterial(mesh, spacing, plot_cells, savepath)
 
+
         #####################################
         ########## GENERATE TRACKS ##########
         #####################################
-        check = ConvergenceTest()
+
         setup = InitializeTracks(num_azim, t, pitch, pitch, n_p, r, fsr, fuelgeom)
         setup.getTrackParams()
         setup.makeTracks()
@@ -147,12 +150,14 @@ def solveMOC(num_azim, spacing, t, savepath):
         setup.findIntersection()
         setup.plotTracks(savepath)
         setup.reflectRays()
-
         setup.findAllTrackCellIntersect(mesh.cells, spacing)
-        f.write("\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments))
-        print "\nTotal number of segments \t %g\n\n" % (setup.tot_num_segments)
-
         setup.getFSRVolumes(fuel, mod, mesh)
+
+
+        f.write("\nTotal number of angles \t %g\n" % (num_azim * 2))
+        f.write("\nTotal number of segments \t %g\n" % (setup.tot_num_segments))
+        print "\nTotal number of segments \t %g\n" % (setup.tot_num_segments)
+
 
 
         ######################################
@@ -160,15 +165,27 @@ def solveMOC(num_azim, spacing, t, savepath):
         ######################################
         flux = MethodOfCharacteristics(sigma_fuel_tot, sigma_mod_tot, fsr, setup, check, mesh)
         MOCresults = flux.solveFlux(num_iter_max, tol, update_source)
+
         midpt = mesh.n_cells/2 - 1
         plotter.plotScalarFlux(mesh, 0, mesh.mesh, 0, savepath)
         plotter.plotCenterFlux(mesh, mesh.cells, midpt, flux.results[0], 1, savepath)
         plotter.plotCenterFluxY(mesh, mesh.cells, midpt, flux.results[0], 2, savepath)
+
         if MOCresults:
-                f.write("\nConverged in %d iterations!\nL2 \t%g \nAvg fuel flux\t %f \nAvg mod flux\t %f\nAverage Flux\t %f "
-                        "\nFlux ratio\t %f\nTop right fuel corner flux\t %g\nCorner flux over fuel source\t %g\n\n"
+                """
+                f.write("\nConverged in %d iterations! L2 \t%g \nAvgfuelflux\t %f \nAvgmodflux\t %f\nAverageFlux\t %f "
+                        "\nFluxratio\t %f\nfuelcornerflux\t %g\nCorner_normalized\t %g\n\n"
                         % (flux.results[0], flux.l2 ,flux.results[1], flux.results[2], flux.results[3], flux.results[4],
                            flux.results[5], flux.results[5] / q_fuel))
+                """
+                f.write(
+                        "#seg\tAvgfuelfl\t  Avgmodfl\t AvgFlux\t  "
+                        "Fluxrat\t  cornerfl\t Corner_norm\t \n"
+                        "%f\t%f\t%f\t%f\t%f\t%g\t%g\n\n\n"
+                        "\nConverged in %d iterations!\t L2 \t%g \n"
+                        % (setup.tot_num_segments, flux.results[1], flux.results[2], flux.results[3], flux.results[4],
+                           flux.results[5], flux.results[5] / q_fuel, flux.results[0], flux.l2))
+                #normalized = Corner flux over fuel source\t %g\n\n"
                 f.close()
         elif not MOCresults:
                 f.write("\n*********************************\n"
